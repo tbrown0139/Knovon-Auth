@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Okta Authenticated WebApp</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f8f9fa;
+        }
+
+        .banner {
+            width: 100%;
+            background-color: #ff4d4d;
+            color: white;
+            text-align: center;
+            padding: 10px 0;
+            font-size: 1.2em;
+            box-sizing: border-box;
+            word-wrap: break-word;
+        }
+
+        .logo {
+            margin-bottom: 20px;
+        }
+
+        .logo img {
+            width: 150px;
+            height: auto;
+        }
+
+        .header {
+            font-size: 2em;
+            margin-bottom: 20px;
+            color: #333;
+            text-align: center;
+        }
+
+        .container {
+            display: flex;
+            justify-content: space-around;
+            width: 80%;
+            flex-wrap: wrap;
+        }
+
+        .box {
+            background-color: #fff;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            width: 30%;
+            min-width: 250px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+            margin: 10px;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .box.disabled {
+            background-color: #e0e0e0;
+            color: #a0a0a0;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .box i {
+            font-size: 3em;
+            color: #007BFF;
+        }
+
+        .box h2 {
+            margin-top: 10px;
+            font-size: 1.5em;
+        }
+
+        .box p {
+            margin-top: 10px;
+            font-size: 1em;
+            color: #666;
+        }
+
+        .footer {
+            margin-top: 20px;
+            font-size: 0.8em;
+            color: #aaa;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .box {
+                width: 80%;
+                margin: 10px 0;
+            }
+        }
+    </style>
+    <script src="https://global.oktacdn.com/okta-auth-js/5.3.1/okta-auth-js.min.js"></script>
+</head>
+<body>
+    <div class="banner">
+        Authorized Users Only
+    </div>
+    <div class="logo">
+        <img src="https://ok12static.oktacdn.com/fs/bco/1/fs04mdx4j4P0MX6MQ5d7" alt="Knovon Logo">
+    </div>
+    <div class="header">
+        Okta Authenticated WebApp
+    </div>
+    <div id="userInfo" class="container"></div>
+    <div class="container">
+        <div id="vendorBox" class="box">
+            <i class="fas fa-truck"></i>
+            <h2>Vendor</h2>
+            <p>Our service providers and partners.</p>
+        </div>
+        <div id="employeeBox" class="box">
+            <i class="fas fa-users"></i>
+            <h2>Employee</h2>
+            <p>The people who work for us.</p>
+        </div>
+        <div id="partnerBox" class="box disabled">
+            <i class="fas fa-handshake"></i>
+            <h2>Partner</h2>
+            <p>Our clients and customers.</p>
+        </div>
+    </div>
+    <div class="footer">
+        &copy; 2024 Knovon. All rights reserved.
+    </div>
+
+    <script>
+        // Initialize Okta Auth SDK
+        const authClient = new OktaAuth({
+            issuer: 'https://{YourOktaDomain}/oauth2/default',
+            clientId: '{YourClientID}',
+            redirectUri: window.location.origin + '/callback'
+        });
+
+        // Render login widget if not authenticated
+        async function ensureAuthenticated() {
+            const session = await authClient.session.get();
+            if (!session.status === 'ACTIVE') {
+                window.location.href = '/login';
+            } else {
+                fetchUserProfile();
+            }
+        }
+
+        // Fetch user profile data from Okta
+        async function fetchUserProfile() {
+            const accessToken = await authClient.token.getWithRedirect();
+            const userInfo = await authClient.token.getUserInfo(accessToken.tokens.accessToken);
+            
+            displayUserInfo(userInfo);
+            enableOrDisableBoxes(userInfo);
+        }
+
+        // Display user information
+        function displayUserInfo(user) {
+            const userInfoDiv = document.getElementById('userInfo');
+            const userBox = document.createElement('div');
+            userBox.classList.add('box');
+            userBox.innerHTML = `
+                <i class="fas fa-user"></i>
+                <h2>${user.name}</h2>
+                <p>${user.email}</p>
+            `;
+            userInfoDiv.appendChild(userBox);
+        }
+
+        // Enable or disable boxes based on user profile fields
+        function enableOrDisableBoxes(user) {
+            if (user.vendorAccess) {
+                document.getElementById('vendorBox').classList.remove('disabled');
+            }
+            if (user.employeeAccess) {
+                document.getElementById('employeeBox').classList.remove('disabled');
+            }
+            if (user.partnerAccess) {
+                document.getElementById('partnerBox').classList.remove('disabled');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            ensureAuthenticated();
+        });
+    </script>
+</body>
+</html>
